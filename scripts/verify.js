@@ -3,14 +3,14 @@
  * Run after starting the server: node scripts/verify.js
  *
  * Tests:
- *  1. Create a secret
- *  2. Retrieve it once  (must succeed)
- *  3. Retrieve it again (must 404 — burn worked)
- *  4. Create a secret with 60s TTL, wait, attempt retrieve (must 404 — expiry worked)
+ *  1. Create a secret and retrieve it once (must succeed)
+ *  2. Retrieve it again (must 404 — burn worked)
+ *  3. Create a secret with short TTL, wait, attempt retrieve (must 404 — expiry worked)
+ *  4. Invalid / non-existent ID returns 404
+ *  5. Missing X-Burn-Token header returns 403 (bot protection)
  */
 
 const BASE = process.env.API_URL || 'http://localhost:3000';
-const REVEAL_PATH = '/api/secrets'; // update if your bot-protection changes the endpoint
 
 let passed = 0;
 let failed = 0;
@@ -18,11 +18,19 @@ let failed = 0;
 function ok(label)   { console.log(`  ✓  ${label}`); passed++; }
 function fail(label, detail) { console.error(`  ✗  ${label}${detail ? ` — ${detail}` : ''}`); failed++; }
 
-async function post(path, body) {
+async function post(path, body, extraHeaders = {}) {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
     body: JSON.stringify(body),
+  });
+  return { status: res.status, body: await res.json() };
+}
+
+async function postRaw(path, extraHeaders = {}) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
   });
   return { status: res.status, body: await res.json() };
 }
@@ -45,9 +53,8 @@ async function createSecret(secret, ttl = 3600) {
 }
 
 async function revealSecret(id) {
-  // NOTE: update this function to match your bot-protection strategy
-  // e.g. change to POST, add headers, change path, etc.
-  return get(`${REVEAL_PATH}/${id}`);
+  // Uses POST with X-Burn-Token header (bot-protection endpoint)
+  return postRaw(`/api/secrets/${id}/burn`, { 'X-Burn-Token': 'confirm' });
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -106,6 +113,20 @@ async function testInvalidId() {
     : fail('Expected 404 for non-existent ID', `got status ${status}`);
 }
 
+async function testBotProtection() {
+  console.log('\n── Test 5: Missing X-Burn-Token header returns 403 (bot protection)');
+  const id = await createSecret('bot-test-secret');
+
+  // Attempt reveal WITHOUT the X-Burn-Token header
+  const { status } = await postRaw(`/api/secrets/${id}/burn`, {});
+  status === 403
+    ? ok('Request without burn token correctly returned 403')
+    : fail('Expected 403 for missing burn token', `got status ${status}`);
+
+  // Clean up: reveal properly so the secret is burned
+  await revealSecret(id);
+}
+
 // ── Run ─────────────────────────────────────────────────────────────────────
 
 (async () => {
@@ -116,6 +137,7 @@ async function testInvalidId() {
     await testBurnOnView();
     await testExpiry();
     await testInvalidId();
+    await testBotProtection();
   } catch (err) {
     console.error('\nUnexpected error:', err.message);
     failed++;

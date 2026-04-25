@@ -1,9 +1,10 @@
 import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
-const IV_BYTES  = 12;
-const TAG_BYTES = 16;
+const IV_BYTES = 12;  // Recommended for GCM
+const TAG_BYTES = 16;  // Standard auth tag length
 
+// Derive 32-byte key from hex string in env
 function getKey() {
   const hex = process.env.MASTER_KEY;
   if (!hex || hex.length !== 64) {
@@ -12,13 +13,9 @@ function getKey() {
   return Buffer.from(hex, 'hex');
 }
 
-/**
- * Encrypts plaintext → base64url string safe to store in the DB.
- * @param {string} plaintext
- * @returns {string}
- */
+// Encrypt plaintext and return base64url string safe for DB storage
 export function encrypt(plaintext) {
-  const iv     = crypto.randomBytes(IV_BYTES);
+  const iv = crypto.randomBytes(IV_BYTES);
   const cipher = crypto.createCipheriv(ALGORITHM, getKey(), iv);
 
   const ciphertext = Buffer.concat([
@@ -26,19 +23,15 @@ export function encrypt(plaintext) {
     cipher.final(),
   ]);
 
+  // Store IV + auth tag + ciphertext together
   return Buffer.concat([iv, cipher.getAuthTag(), ciphertext]).toString('base64url');
 }
 
-/**
- * Decrypts a stored base64url payload → plaintext.
- * Throws if the payload was tampered with (auth tag mismatch).
- * @param {string} payload
- * @returns {string}
- */
+// Decrypt stored payload, throws if auth tag is invalid (tampered data)
 export function decrypt(payload) {
-  const buf        = Buffer.from(payload, 'base64url');
-  const iv         = buf.subarray(0, IV_BYTES);
-  const tag        = buf.subarray(IV_BYTES, IV_BYTES + TAG_BYTES);
+  const buf = Buffer.from(payload, 'base64url');
+  const iv = buf.subarray(0, IV_BYTES);
+  const tag = buf.subarray(IV_BYTES, IV_BYTES + TAG_BYTES);
   const ciphertext = buf.subarray(IV_BYTES + TAG_BYTES);
 
   const decipher = crypto.createDecipheriv(ALGORITHM, getKey(), iv);

@@ -1,2 +1,15 @@
 node_modules/
 .env
+.env.local
+.DS_Store
+*.log
+npm-debug.log*
+logs/
+
+# Build output
+dist/
+coverage/
+
+# IDE
+.vscode/
+.idea/

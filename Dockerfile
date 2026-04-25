@@ -5,7 +5,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-COPY . .
+COPY api ./api
+COPY scripts ./scripts
+COPY db ./db
+COPY web ./web
+COPY .env.example ./
 
 EXPOSE 3000
 

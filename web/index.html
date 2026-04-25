@@ -1,91 +1,249 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Secure Credential Drop</title>
+  <meta name="description"
+    content="Securely share passwords, API keys, and sensitive text via a self-destructing one-time link." />
+  <title>Secure Credential Drop — One-Time Secret Sharing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     :root {
-      --bg:      #0f1117;
+      --bg: #0f1117;
       --surface: #1a1d27;
-      --border:  #2e3147;
-      --accent:  #6c63ff;
-      --danger:  #e05252;
-      --ok:      #52e07a;
-      --text:    #e8eaf6;
-      --muted:   #8b8fa8;
-      --radius:  10px;
+      --border: #2e3147;
+      --accent: #6c63ff;
+      --danger: #e05252;
+      --ok: #52e07a;
+      --text: #e8eaf6;
+      --muted: #8b8fa8;
+      --radius: 10px;
     }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-family: var(--font);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 1.5rem;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124, 106, 255, 0.06), transparent),
+        radial-gradient(ellipse 60% 50% at 80% 100%, rgba(240, 101, 101, 0.04), transparent);
+    }
+
+    /* Background particle effect */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(1.5px 1.5px at 20% 30%, rgba(124, 106, 255, 0.15), transparent),
+        radial-gradient(1px 1px at 70% 20%, rgba(124, 106, 255, 0.1), transparent),
+        radial-gradient(1.5px 1.5px at 40% 70%, rgba(240, 101, 101, 0.08), transparent),
+        radial-gradient(1px 1px at 90% 60%, rgba(74, 222, 128, 0.06), transparent);
+      pointer-events: none;
+      z-index: 0;
     }
 
     .card {
+      position: relative;
+      z-index: 1;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 2rem;
       width: 100%;
       max-width: 540px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      animation: card-in 0.5s var(--transition) both;
     }
 
-    h1   { font-size: 1.3rem; margin-bottom: 0.2rem; }
-    .sub { font-size: 0.82rem; color: var(--muted); margin-bottom: 1.5rem; }
+    @keyframes card-in {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.97);
+      }
 
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Header styles */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--text), var(--text-dim));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .sub {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    /* Form elements */
     label {
       display: block;
-      font-size: 0.75rem;
-      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-dim);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 0.35rem;
-      margin-top: 1rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.4rem;
+      margin-top: 1.1rem;
     }
 
-    textarea, select, input[type="number"] {
+    textarea,
+    select,
+    input[type="number"] {
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
       color: var(--text);
-      font-size: 0.9rem;
-      padding: 0.65rem 0.8rem;
+      font-size: 0.88rem;
+      font-family: var(--font);
+      padding: 0.7rem 0.85rem;
       outline: none;
       transition: border-color 0.2s;
     }
-    textarea { min-height: 110px; resize: vertical; font-family: monospace; }
-    textarea:focus, select:focus, input:focus { border-color: var(--accent); }
 
-    .row { display: flex; gap: 1rem; align-items: flex-end; margin-top: 1rem; }
-    .row .field { flex: 1; }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+      font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+      line-height: 1.5;
+    }
 
+    textarea:focus,
+    select:focus,
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    textarea::placeholder {
+      color: var(--muted);
+    }
+
+    .row {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-end;
+      margin-top: 1.1rem;
+    }
+
+    .row .field {
+      flex: 1;
+    }
+
+    select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%236b7194' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      padding-right: 2rem;
+    }
+
+    /* Button styles */
     .btn {
-      background: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
       color: #fff;
       border: none;
-      border-radius: var(--radius);
-      padding: 0.65rem 1.2rem;
+      border-radius: var(--radius-sm);
+      padding: 0.7rem 1.4rem;
       font-size: 0.88rem;
       font-weight: 600;
+      font-family: var(--font);
       cursor: pointer;
       white-space: nowrap;
-      transition: opacity 0.2s;
+      transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
+      box-shadow: 0 2px 12px var(--accent-glow);
     }
-    .btn:hover   { opacity: 0.85; }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-ghost   { background: var(--border); }
-    .btn-danger  { background: var(--danger); }
 
+    .btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-ghost {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+
+    .btn-ghost:hover {
+      background: var(--border);
+      box-shadow: none;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, var(--danger), #d94f4f);
+      box-shadow: 0 2px 12px var(--danger-glow);
+    }
+
+    .btn-danger:hover {
+      box-shadow: 0 4px 20px rgba(240, 101, 101, 0.3);
+    }
+
+    /* Result display box */
     .box {
       margin-top: 1.2rem;
       padding: 1rem;
@@ -93,15 +251,36 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       display: none;
+      animation: fade-in 0.3s ease both;
     }
-    .box.show { display: block; }
+
+    .box.show {
+      display: block;
+    }
+
+    @keyframes fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
     .link-text {
       word-break: break-all;
-      font-family: monospace;
-      font-size: 0.82rem;
+      font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.8rem;
       color: var(--accent);
       margin-bottom: 0.75rem;
+      padding: 0.6rem 0.75rem;
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      border: 1px dashed var(--border);
+      line-height: 1.5;
     }
 
     .secret-text {
@@ -109,8 +288,10 @@
       font-size: 0.88rem;
       white-space: pre-wrap;
       word-break: break-all;
+      line-height: 1.5;
     }
 
+    /* Flash notification messages */
     .flash {
       margin-top: 1rem;
       padding: 0.7rem 1rem;
@@ -118,215 +299,247 @@
       font-size: 0.84rem;
       display: none;
     }
-    .flash.show  { display: block; }
-    .flash-err   { background: rgba(224,82,82,0.1);  border: 1px solid var(--danger); color: var(--danger); }
-    .flash-ok    { background: rgba(82,224,122,0.1); border: 1px solid var(--ok);     color: var(--ok); }
 
-    .notice { font-size: 0.78rem; color: var(--muted); margin-top: 0.6rem; }
-    .center { text-align: center; }
+    .flash.show {
+      display: block;
+    }
+
+    .flash-err {
+      background: rgba(224, 82, 82, 0.1);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+    }
+
+    .flash-ok {
+      background: rgba(82, 224, 122, 0.1);
+      border: 1px solid var(--ok);
+      color: var(--ok);
+    }
+
+    .notice {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 0.6rem;
+    }
+
+    .center {
+      text-align: center;
+    }
   </style>
 </head>
+
 <body>
 
-<!-- ── CREATE PAGE (no ?id= param) ─────────────────────────────────────── -->
-<div class="card" id="page-create">
-  <h1>Secure Credential Drop</h1>
-  <p class="sub">Share a password or API key via a link that self-destructs on first view.</p>
-
-  <label for="secretInput">Secret</label>
-  <textarea id="secretInput" placeholder="Paste your password, API key, or any sensitive text…"
-            autocomplete="off" spellcheck="false"></textarea>
-
-  <div class="row">
-    <div class="field">
-      <label for="ttlSelect">Expires after</label>
-      <select id="ttlSelect">
-        <option value="3600">1 hour</option>
-        <option value="21600">6 hours</option>
-        <option value="86400" selected>24 hours</option>
-        <option value="259200">3 days</option>
-        <option value="604800">7 days</option>
-        <option value="custom">Custom…</option>
-      </select>
+  <!-- Create secret form -->
+  <div class="card" id="page-create">
+    <div class="logo">
+      <div class="logo-icon">🔐</div>
+      <h1>Secure Credential Drop</h1>
     </div>
-    <div class="field" id="customWrap" style="display:none">
-      <label for="ttlCustom">Seconds</label>
-      <input type="number" id="ttlCustom" min="60" max="604800" placeholder="e.g. 7200" />
+    <p class="sub">Share a password or API key via a link that self-destructs on first view.</p>
+
+    <label for="secretInput">Secret</label>
+    <textarea id="secretInput" placeholder="Paste your password, API key, or any sensitive text…" autocomplete="off"
+      spellcheck="false"></textarea>
+
+    <div class="row">
+      <div class="field">
+        <label for="ttlSelect">Expires after</label>
+        <select id="ttlSelect">
+          <option value="3600">1 hour</option>
+          <option value="21600">6 hours</option>
+          <option value="86400" selected>24 hours</option>
+          <option value="259200">3 days</option>
+          <option value="604800">7 days</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </div>
+      <div class="field" id="customWrap" style="display:none">
+        <label for="ttlCustom">Seconds</label>
+        <input type="number" id="ttlCustom" min="60" max="604800" placeholder="e.g. 7200" />
+      </div>
+      <button class="btn" id="createBtn">Generate Link</button>
     </div>
-    <button class="btn" id="createBtn">Generate Link</button>
-  </div>
 
-  <div class="flash flash-err" id="createErr"></div>
+    <div class="flash flash-err" id="createErr"></div>
 
-  <div class="box" id="createResult">
-    <label>One-time link — share this</label>
-    <div class="link-text" id="generatedLink"></div>
-    <button class="btn btn-ghost" id="copyLinkBtn" style="font-size:0.8rem;padding:0.4rem 0.9rem">Copy Link</button>
-    <p class="notice" style="margin-top:0.75rem">
-      ⚠ This link works <strong>exactly once</strong>. Copy it before sharing.
-    </p>
-  </div>
-</div>
-
-<!-- ── VIEW PAGE (?id= param present) ──────────────────────────────────────
-     The secret is NOT fetched on page load.
-     The user must click "Reveal Secret" to trigger retrieval.
-     TODO (Bot Protection): this two-step pattern prevents crawlers from
-     burning the secret just by visiting the URL — but your server-side
-     implementation must also enforce it. ─────────────────────────────── -->
-<div class="card" id="page-view" style="display:none">
-  <h1>Secure Credential Drop</h1>
-  <p class="sub">Someone shared a one-time secret with you.</p>
-
-  <!-- Shown on page load — secret is NOT fetched until user clicks Reveal -->
-  <div id="viewReady" style="display:none">
-    <p style="margin-bottom:1rem;font-size:0.88rem;color:var(--muted)">
-      Click below to reveal the secret. It will be <strong style="color:var(--text)">permanently deleted</strong> the moment you do.
-    </p>
-    <div class="center">
-      <button class="btn btn-danger" id="revealBtn">Reveal Secret</button>
-    </div>
-    <p class="notice center" style="margin-top:0.75rem">Do not click if you are not the intended recipient.</p>
-  </div>
-
-  <!-- Shown after successful reveal -->
-  <div id="viewSecret" style="display:none">
-    <div class="flash flash-ok show" style="margin-top:0;margin-bottom:1rem">
-      Secret revealed and permanently deleted from the server.
-    </div>
-    <div class="box show">
-      <div class="secret-text" id="secretDisplay"></div>
-    </div>
-    <button class="btn btn-ghost" id="copySecretBtn" style="margin-top:0.75rem;font-size:0.8rem;padding:0.4rem 0.9rem">
-      Copy Secret
-    </button>
-  </div>
-
-  <!-- Shown when secret is gone / expired / already viewed -->
-  <div id="viewGone" style="display:none">
-    <div class="flash flash-err show" style="margin-top:0">
-      This secret has already been viewed, has expired, or does not exist.
+    <div class="box" id="createResult">
+      <label>One-time link — share this</label>
+      <div class="link-text" id="generatedLink"></div>
+      <button class="btn btn-ghost" id="copyLinkBtn" style="font-size:0.8rem;padding:0.4rem 0.9rem">Copy Link</button>
+      <p class="notice" style="margin-top:0.75rem">
+        ⚠ This link works <strong>exactly once</strong>. Copy it before sharing.
+      </p>
     </div>
   </div>
 
-  <div class="flash flash-err" id="viewErr"></div>
-</div>
+  <!-- View secret page: require explicit reveal click to block crawlers from pre-fetching -->
+  <div class="card" id="page-view" style="display:none">
+    <div class="logo">
+      <div class="logo-icon">🔐</div>
+      <h1>Secure Credential Drop</h1>
+    </div>
+    <p class="sub">Someone shared a one-time secret with you.</p>
 
-<script>
-  const API = 'http://localhost:3000';
+    <!-- Initial state: reveal button visible, secret not fetched yet -->
+    <div id="viewReady" style="display:none">
+      <p style="margin-bottom:1rem;font-size:0.88rem;color:var(--muted)">
+        Click below to reveal the secret. It will be <strong style="color:var(--text)">permanently deleted</strong> the
+        moment you do.
+      </p>
+      <div class="center">
+        <button class="btn btn-danger" id="revealBtn">Reveal Secret</button>
+      </div>
+      <p class="notice center" style="margin-top:0.75rem">Do not click if you are not the intended recipient.</p>
+    </div>
 
-  // ── Shared fetch helper ──────────────────────────────────────────────────
-  async function apiFetch(method, path, body) {
-    const res  = await fetch(`${API}${path}`, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Request failed.');
-    return data;
-  }
+    <!-- Shown after successful reveal -->
+    <div id="viewSecret" style="display:none">
+      <div class="flash flash-ok show" style="margin-top:0;margin-bottom:1rem">
+        Secret revealed and permanently deleted from the server.
+      </div>
+      <div class="box show">
+        <div class="secret-text" id="secretDisplay"></div>
+      </div>
+      <button class="btn btn-ghost" id="copySecretBtn"
+        style="margin-top:0.75rem;font-size:0.8rem;padding:0.4rem 0.9rem">
+        Copy Secret
+      </button>
+    </div>
 
-  // ── Route ────────────────────────────────────────────────────────────────
-  const secretId = new URLSearchParams(window.location.search).get('id');
+    <!-- Shown when secret is gone / expired / already viewed -->
+    <div id="viewGone" style="display:none">
+      <div class="flash flash-err show" style="margin-top:0">
+        This secret has already been viewed, has expired, or does not exist.
+      </div>
+    </div>
 
-  if (secretId) {
-    show('page-view'); hide('page-create');
-    initViewPage(secretId);
-  } else {
-    initCreatePage();
-  }
+    <div class="flash flash-err" id="viewErr"></div>
+  </div>
 
-  // ── Create page ──────────────────────────────────────────────────────────
-  function initCreatePage() {
-    const ttlSelect  = document.getElementById('ttlSelect');
-    const customWrap = document.getElementById('customWrap');
-    const createBtn  = document.getElementById('createBtn');
-    const errEl      = document.getElementById('createErr');
-    const resultEl   = document.getElementById('createResult');
-    const linkEl     = document.getElementById('generatedLink');
-    const copyBtn    = document.getElementById('copyLinkBtn');
+  <script>
+    const API = window.API_BASE || window.location.origin;
 
-    ttlSelect.addEventListener('change', () => {
-      customWrap.style.display = ttlSelect.value === 'custom' ? 'block' : 'none';
-    });
+    // Helper for API requests with JSON body
+    async function apiFetch(method, path, body, extraHeaders = {}) {
+      const headers = { 'Content-Type': 'application/json', ...extraHeaders };
+      const res = await fetch(`${API}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed.');
+      return data;
+    }
 
-    createBtn.addEventListener('click', async () => {
-      flash(errEl, ''); hide(resultEl);
-      const secret = document.getElementById('secretInput').value.trim();
-      if (!secret) return flash(errEl, 'Please enter a secret.');
+    // Check if we're viewing an existing secret or creating a new one
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const secretId = pathParts.length > 0 ? pathParts[0] : null;
 
-      const ttl = ttlSelect.value === 'custom'
-        ? parseInt(document.getElementById('ttlCustom').value, 10)
-        : parseInt(ttlSelect.value, 10);
-      if (!ttl || ttl < 60) return flash(errEl, 'Minimum expiry is 60 seconds.');
+    if (secretId) {
+      show('page-view'); hide('page-create');
+      initViewPage(secretId);
+    } else {
+      initCreatePage();
+    }
 
-      setBtn(createBtn, 'Generating…', true);
-      try {
-        const data = await apiFetch('POST', '/api/secrets', { secret, ttl });
-        linkEl.textContent = data.link;
-        show(resultEl);
-        document.getElementById('secretInput').value = '';
-      } catch (e) {
-        flash(errEl, e.message);
-      } finally {
-        setBtn(createBtn, 'Generate Link', false);
-      }
-    });
+    // ── Create page ──────────────────────────────────────────────────────────
+    function initCreatePage() {
+      const ttlSelect = document.getElementById('ttlSelect');
+      const customWrap = document.getElementById('customWrap');
+      const createBtn = document.getElementById('createBtn');
+      const errEl = document.getElementById('createErr');
+      const resultEl = document.getElementById('createResult');
+      const linkEl = document.getElementById('generatedLink');
+      const copyBtn = document.getElementById('copyLinkBtn');
 
-    copyBtn.addEventListener('click', () => copyText(linkEl.textContent, copyBtn, 'Copy Link'));
-  }
+      ttlSelect.addEventListener('change', () => {
+        customWrap.style.display = ttlSelect.value === 'custom' ? 'block' : 'none';
+      });
 
-  // ── View page ────────────────────────────────────────────────────────────
-  function initViewPage(id) {
-    // Page loads — show the reveal button immediately.
-    // The secret is NOT fetched here. Only a deliberate button click triggers retrieval.
-    hide('viewLoading');
-    show('viewReady');
+      createBtn.addEventListener('click', async () => {
+        flash(errEl, ''); hide(resultEl);
+        const secret = document.getElementById('secretInput').value.trim();
+        if (!secret) return flash(errEl, 'Please enter a secret.');
 
-    document.getElementById('revealBtn').addEventListener('click', async () => {
-      const btn = document.getElementById('revealBtn');
-      setBtn(btn, 'Revealing…', true);
-      try {
-        // TODO: update this call to match your bot-protection strategy.
-        // e.g. you may change the method, endpoint path, or add custom headers.
-        const data = await apiFetch('GET', `/api/secrets/${encodeURIComponent(id)}`);
-        hide('viewReady');
-        document.getElementById('secretDisplay').textContent = data.secret;
-        show('viewSecret');
+        const ttl = ttlSelect.value === 'custom'
+          ? parseInt(document.getElementById('ttlCustom').value, 10)
+          : parseInt(ttlSelect.value, 10);
+        if (!ttl || ttl < 60) return flash(errEl, 'Minimum expiry is 60 seconds.');
 
-        document.getElementById('copySecretBtn').addEventListener('click', () =>
-          copyText(data.secret, document.getElementById('copySecretBtn'), 'Copy Secret')
-        );
-      } catch (e) {
-        hide('viewReady'); show('viewGone');
-        flash(document.getElementById('viewErr'), e.message);
-      }
-    });
-  }
+        setBtn(createBtn, 'Generating…', true);
+        try {
+          const data = await apiFetch('POST', '/api/secrets', { secret, ttl });
+          linkEl.textContent = data.link;
+          show(resultEl);
+          document.getElementById('secretInput').value = '';
+        } catch (e) {
+          flash(errEl, e.message);
+        } finally {
+          setBtn(createBtn, 'Generate Link', false);
+        }
+      });
 
-  // ── DOM helpers ──────────────────────────────────────────────────────────
-  function show(el) {
-    const node = typeof el === 'string' ? document.getElementById(el) : el;
-    if (node) node.style.display = 'block';
-  }
-  function hide(el) {
-    const node = typeof el === 'string' ? document.getElementById(el) : el;
-    if (node) node.style.display = 'none';
-  }
-  function flash(el, msg) {
-    el.textContent = msg;
-    el.classList.toggle('show', !!msg);
-  }
-  function setBtn(btn, label, disabled) {
-    btn.textContent = label;
-    btn.disabled    = disabled;
-  }
-  async function copyText(text, btn, defaultLabel) {
-    await navigator.clipboard.writeText(text);
-    btn.textContent = 'Copied!';
-    setTimeout(() => { btn.textContent = defaultLabel; }, 2000);
-  }
-</script>
+      copyBtn.addEventListener('click', () => copyText(linkEl.textContent, copyBtn, 'Copy Link'));
+    }
+
+    // View page logic - only fetch secret on explicit user click
+    function initViewPage(id) {
+      show('viewReady');
+
+      document.getElementById('revealBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('revealBtn');
+        setBtn(btn, 'Revealing…', true);
+        try {
+          // POST with custom header to block crawlers: they only send GET for previews
+          const data = await apiFetch(
+            'POST',
+            `/api/secrets/${encodeURIComponent(id)}/burn`,
+            null,
+            { 'X-Burn-Token': 'confirm' },
+          );
+          hide('viewReady');
+          document.getElementById('secretDisplay').textContent = data.secret;
+          show('viewSecret');
+
+          document.getElementById('copySecretBtn').addEventListener('click', () =>
+            copyText(data.secret, document.getElementById('copySecretBtn'), 'Copy Secret')
+          );
+        } catch (e) {
+          hide('viewReady'); show('viewGone');
+          flash(document.getElementById('viewErr'), e.message);
+        }
+      });
+    }
+
+    // DOM utility functions
+    function show(el) {
+      const node = typeof el === 'string' ? document.getElementById(el) : el;
+      if (node) node.style.display = 'block';
+    }
+    function hide(el) {
+      const node = typeof el === 'string' ? document.getElementById(el) : el;
+      if (node) node.style.display = 'none';
+    }
+    function flash(el, msg) {
+      el.textContent = msg;
+      el.classList.toggle('show', !!msg);
+    }
+    function setBtn(btn, label, disabled) {
+      btn.textContent = label;
+      btn.disabled = disabled;
+    }
+    async function copyText(text, btn, defaultLabel) {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = 'Copied!';
+      btn.setAttribute('data-copied', 'true');
+      setTimeout(() => {
+        btn.textContent = defaultLabel;
+        btn.removeAttribute('data-copied');
+      }, 2000);
+    }
+  </script>
 </body>
+
 </html>

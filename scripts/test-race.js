@@ -8,7 +8,6 @@
 
 const BASE        = process.env.API_URL  || 'http://localhost:3000';
 const CONCURRENCY = parseInt(process.env.CONCURRENCY ?? '10', 10);
-const REVEAL_PATH = '/api/secrets'; // update to match your bot-protection endpoint
 
 async function post(path, body) {
   const res = await fetch(`${BASE}${path}`, {
@@ -20,9 +19,13 @@ async function post(path, body) {
 }
 
 async function reveal(id) {
-  // NOTE: update to match your bot-protection strategy (method, headers, path)
-  const res = await fetch(`${BASE}${REVEAL_PATH}/${id}`, {
-    headers: { 'Content-Type': 'application/json' },
+  // Uses POST with X-Burn-Token header (bot-protection endpoint)
+  const res = await fetch(`${BASE}/api/secrets/${id}/burn`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Burn-Token': 'confirm',
+    },
   });
   return { status: res.status, body: await res.json() };
 }

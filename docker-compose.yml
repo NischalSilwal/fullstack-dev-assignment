@@ -1,35 +1,41 @@
-version: '3.9'
+version: '3.8'
 
 services:
   db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    ports:
-      - '5432:5432'
+    image: postgres:15-alpine
+    container_name: secret_drop_db
     environment:
-      POSTGRES_DB: secret_drop
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-secret_drop}
+    ports:
+      - "5432:5432"
     volumes:
-      - pg_data:/var/lib/postgresql/data
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    ports:
-      - '3000:3000'
-    environment:
-      - PORT=3000
-      - DATABASE_URL=postgresql://postgres:password@db:5432/secret_drop
-      - MASTER_KEY=${MASTER_KEY}
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5500}
-      - MAX_EXPIRY_SECONDS=604800
-      - MAX_SECRET_BYTES=10240
+  app:
+    build: .
+    container_name: secret_drop_app
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-secret_drop}
+      MASTER_KEY: ${MASTER_KEY}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3001}
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./web:/app/web:ro
+    env_file:
+      - .env
 
 volumes:
-  pg_data:
+  postgres_data:
